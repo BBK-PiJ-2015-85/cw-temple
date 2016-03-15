@@ -7,6 +7,7 @@ import game.NodeStatus;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.Stack;
 
 public class Explorer {
 
@@ -41,25 +42,40 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void explore(ExplorationState state) {
-        Set<Long> seen = new LinkedHashSet<>();
+        Set<Long> seen = new LinkedHashSet<>(); //a set to store nodes that have already been visited
+        Stack<Long> dfs = new Stack<>(); //stack to use for the depth first search
+        Stack<Long> retraceSteps = new Stack<>(); //stack to retrace steps
 
-        while (state.getDistanceToTarget() != 0) {
-            Collection<NodeStatus> cns = state.getNeighbours();
-            // add current position to seen items
-            seen.add(state.getCurrentLocation());
+        //add the only possible starting node onto the stack
+        Collection<NodeStatus> collectionNodeStatus = state.getNeighbours();
+        collectionNodeStatus.stream().forEach((s) -> dfs.push(s.getId()));
+        seen.add(state.getCurrentLocation());
 
-            int distance = Integer.MAX_VALUE;
-            long id = -1L;
-            for (NodeStatus ns : cns) {
-                if (ns.getDistanceToTarget() < distance && !seen.contains(ns.getId())) {
-                    distance = ns.getDistanceToTarget();
-                    id = ns.getId();
+        //now enter loop to keep moving until the orb is reached
+        while (!dfs.isEmpty()) {
+            collectionNodeStatus = state.getNeighbours();
+            //make sure that the next node to move to is adjacent
+            if (collectionNodeStatus.stream().anyMatch((s) -> s.getId() == dfs.peek())) {
+                retraceSteps.push(state.getCurrentLocation());
+                state.moveTo(dfs.pop());
+            } else {
+                //if not adjacent then need to retrace steps until it is adjacent
+                while (!collectionNodeStatus.stream().anyMatch((s) -> s.getId() == dfs.peek())) {
+                    state.moveTo(retraceSteps.pop());
+                    collectionNodeStatus = state.getNeighbours();
                 }
+                retraceSteps.push(state.getCurrentLocation());
+                state.moveTo(dfs.pop());
             }
-            System.out.println("Moving to tile with id: " + id);
-            System.out.println("Moving from position: " + state.getCurrentLocation());
-            state.moveTo(id);
-            System.out.println("\t to: " + state.getCurrentLocation());
+            if (!seen.contains(state.getCurrentLocation())) {
+                seen.add(state.getCurrentLocation());
+            }
+            if (state.getDistanceToTarget() == 0) {
+                break;
+            } else {
+                collectionNodeStatus = state.getNeighbours();
+                collectionNodeStatus.stream().filter((s) -> !seen.contains(s.getId())).forEach((s) -> dfs.push(s.getId()));
+            }
         }
     }
 
