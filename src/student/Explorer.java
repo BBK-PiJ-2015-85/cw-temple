@@ -53,6 +53,7 @@ public class Explorer {
 
         //now enter loop to keep moving until the orb is reached
         while (!dfs.isEmpty()) {
+
             collectionNodeStatus = state.getNeighbours();
             //make sure that the next node to move to is adjacent
             if (collectionNodeStatus.stream().anyMatch((s) -> s.getId() == dfs.peek())) {
@@ -74,7 +75,14 @@ public class Explorer {
                 break;
             } else {
                 collectionNodeStatus = state.getNeighbours();
-                collectionNodeStatus.stream().filter((s) -> !seen.contains(s.getId())).forEach((s) -> dfs.push(s.getId()));
+                //first add those not seen that are equal or further away to the orb
+                collectionNodeStatus.stream().filter((s) -> !seen.contains(s.getId()))
+                        .filter((s) -> s.getDistanceToTarget() >= state.getDistanceToTarget())
+                        .forEach((s) -> dfs.push(s.getId()));
+                //then add those not seen that are closer to the orb so these will be looked at first
+                collectionNodeStatus.stream().filter((s) -> !seen.contains(s.getId()))
+                        .filter((s) -> s.getDistanceToTarget() < state.getDistanceToTarget())
+                        .forEach((s) -> dfs.push(s.getId()));
             }
         }
     }
