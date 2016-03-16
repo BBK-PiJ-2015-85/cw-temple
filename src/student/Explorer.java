@@ -4,10 +4,7 @@ import game.EscapeState;
 import game.ExplorationState;
 import game.NodeStatus;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 public class Explorer {
 
@@ -42,6 +39,34 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void explore(ExplorationState state) {
+        PriorityQueue<NodeStatus> pq = new PriorityQueueImpl<>(); //queue to determine which is the best node to visit
+        Set<Long> seen = new LinkedHashSet<>(); //store nodes that have already been visited
+        Set<NodeStatus> alreadyMapped = new LinkedHashSet<>();
+        Stack<Long> retraceSteps = new Stack<>(); //stack to retrace steps
+
+        //take first move out of loop and do not add to stack
+        //so that we never go straight back out the entrance and get an empty stack
+        Collection<NodeStatus> cns = state.getNeighbours();
+        seen.add(state.getCurrentLocation());
+        state.moveTo(cns.stream().findFirst().get().getId());
+
+
+        while (state.getDistanceToTarget() != 0) {
+            seen.add(state.getCurrentLocation());
+            cns = state.getNeighbours();
+            cns.stream().filter((s) -> !seen.contains(s.getId()))
+                    .filter((s) -> !alreadyMapped.contains(s)).forEach((s) -> pq.add(s, s.getDistanceToTarget()));
+            cns.stream().forEach(alreadyMapped::add);
+            while (!cns.contains(pq.peek())) {
+                state.moveTo(retraceSteps.pop());
+                cns = state.getNeighbours();
+            }
+            retraceSteps.push(state.getCurrentLocation());
+            state.moveTo(pq.poll().getId());
+        }
+    }
+
+        /*
         Set<Long> seen = new LinkedHashSet<>(); //a set to store nodes that have already been visited
         Stack<Long> dfs = new Stack<>(); //stack to use for the depth first search
         Stack<Long> retraceSteps = new Stack<>(); //stack to retrace steps
@@ -86,6 +111,7 @@ public class Explorer {
             }
         }
     }
+    */
 
     /**
      * Escape from the cavern before the ceiling collapses, trying to collect as much
