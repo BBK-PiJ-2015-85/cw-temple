@@ -39,34 +39,43 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void explore(ExplorationState state) {
+
         PriorityQueue<NodeStatus> pq = new PriorityQueueImpl<>(); //queue to determine which is the best node to visit
         Set<Long> seen = new LinkedHashSet<>(); //store nodes that have already been visited
         Set<NodeStatus> alreadyMapped = new LinkedHashSet<>();
-        Stack<Long> retraceSteps = new Stack<>(); //stack to retrace steps
-
+        List<Long> retraceSteps = new ArrayList<>(); //list to retrace steps
+        Stack<Long> retraceSteps2 = new Stack<>(); //list to retrace steps when you are retracing steps!
+        int stepsTaken = 0;
         //take first move out of loop and do not add to stack
         //so that we never go straight back out the entrance and get an empty stack
         Collection<NodeStatus> cns = state.getNeighbours();
         seen.add(state.getCurrentLocation());
         state.moveTo(cns.stream().findFirst().get().getId());
+        stepsTaken++;
 
 
         while (state.getDistanceToTarget() != 0) {
             seen.add(state.getCurrentLocation());
             cns = state.getNeighbours();
-            cns.stream().filter((s) -> !seen.contains(s.getId()))
-                    .filter((s) -> !alreadyMapped.contains(s)).forEach((s) -> pq.add(s, s.getDistanceToTarget()));
-            cns.stream().forEach(alreadyMapped::add);
-            while (!cns.contains(pq.peek())) {
-                state.moveTo(retraceSteps.pop());
+            for (NodeStatus ns : cns) {
+                if (!alreadyMapped.contains(ns)) {
+                    pq.add(ns, ns.getDistanceToTarget() - stepsTaken);
+                    alreadyMapped.add(ns);
+                }
+            }
+            for (int i = retraceSteps.size() - 1; !cns.contains(pq.peek()); i--) {
+                retraceSteps.add(state.getCurrentLocation());
+                state.moveTo(retraceSteps.get(i));
+                stepsTaken++;
                 cns = state.getNeighbours();
             }
-            retraceSteps.push(state.getCurrentLocation());
+            retraceSteps.add(state.getCurrentLocation());
             state.moveTo(pq.poll().getId());
+            stepsTaken++;
         }
     }
 
-        /*
+/*
         Set<Long> seen = new LinkedHashSet<>(); //a set to store nodes that have already been visited
         Stack<Long> dfs = new Stack<>(); //stack to use for the depth first search
         Stack<Long> retraceSteps = new Stack<>(); //stack to retrace steps
