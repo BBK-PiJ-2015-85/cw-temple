@@ -43,37 +43,66 @@ public class Explorer {
         PriorityQueue<NodeStatus> pq = new PriorityQueueImpl<>(); //queue to determine which is the best node to visit
         Set<Long> seen = new LinkedHashSet<>(); //store nodes that have already been visited
         Set<NodeStatus> alreadyMapped = new LinkedHashSet<>();
-        List<Long> retraceSteps = new ArrayList<>(); //list to retrace steps
-        Stack<Long> retraceSteps2 = new Stack<>(); //list to retrace steps when you are retracing steps!
+        Stack<Long> retraceSteps = new Stack<>(); //list to retrace steps
+        Queue<Long> retraceSteps2 = new ArrayDeque<>(); //list to retrace steps when you are retracing steps!
         int stepsTaken = 0;
-        //take first move out of loop and do not add to stack
-        //so that we never go straight back out the entrance and get an empty stack
+        boolean stack1 = true;
+        boolean leaveBreadCrumbs = false;
+
+        //first put the only possible move into the queue
         Collection<NodeStatus> cns = state.getNeighbours();
         seen.add(state.getCurrentLocation());
-        state.moveTo(cns.stream().findFirst().get().getId());
+        cns.stream().forEach((s) -> pq.add(s, s.getDistanceToTarget()));
         stepsTaken++;
 
-
         while (state.getDistanceToTarget() != 0) {
-            seen.add(state.getCurrentLocation());
+
+            //check if next node to move to is adjacent, if so move to it
+            if (cns.stream().anyMatch((s) -> s.getId() == pq.peek().getId())) {
+                retraceSteps.push(state.getCurrentLocation());
+                state.moveTo(pq.poll().getId());
+                stepsTaken++;
+            } else {
+                //if not adjacent then need to retrace steps until it is
+                while (!cns.contains(pq.peek())) {
+                    if (!retraceSteps.isEmpty()) {
+                        state.moveTo(retraceSteps.pop());
+                        stepsTaken++;
+                    } else {
+                        for (NodeStatus ns : cns) {
+                            if (!seen.contains(ns.getId())) {
+                                if (alreadyMapped.contains(ns)) {
+                                    //System.out.println("xxx");
+                                    pq.updatePriority(ns, ns.getDistanceToTarget() - stepsTaken + state.getDistanceToTarget());
+                                } else {
+                                    pq.add(ns, ns.getDistanceToTarget() - stepsTaken + state.getDistanceToTarget());
+                                    alreadyMapped.add(ns);
+                                }
+                            }
+                        }
+                    }
+                    cns = state.getNeighbours();
+                }
+                retraceSteps.push(state.getCurrentLocation());
+                state.moveTo(pq.poll().getId());
+            }
+
+                //if new node add it to seen
+            if (!seen.contains(state.getCurrentLocation())) {
+                seen.add(state.getCurrentLocation());
+            }
             cns = state.getNeighbours();
             for (NodeStatus ns : cns) {
                 if (!alreadyMapped.contains(ns)) {
-                    pq.add(ns, ns.getDistanceToTarget() - stepsTaken);
+                    pq.add(ns, ns.getDistanceToTarget() * 100);
                     alreadyMapped.add(ns);
                 }
             }
-            for (int i = retraceSteps.size() - 1; !cns.contains(pq.peek()); i--) {
-                retraceSteps.add(state.getCurrentLocation());
-                state.moveTo(retraceSteps.get(i));
-                stepsTaken++;
-                cns = state.getNeighbours();
-            }
-            retraceSteps.add(state.getCurrentLocation());
-            state.moveTo(pq.poll().getId());
-            stepsTaken++;
         }
     }
+
+
+
 
 /*
         Set<Long> seen = new LinkedHashSet<>(); //a set to store nodes that have already been visited
