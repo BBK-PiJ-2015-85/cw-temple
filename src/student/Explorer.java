@@ -4,7 +4,10 @@ import game.EscapeState;
 import game.ExplorationState;
 import game.NodeStatus;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.Stack;
 
 public class Explorer {
 
@@ -40,83 +43,15 @@ public class Explorer {
      */
     public void explore(ExplorationState state) {
 
-        PriorityQueue<NodeStatus> pq = new PriorityQueueImpl<>(); //queue to determine which is the best node to visit
-        Set<Long> seen = new LinkedHashSet<>(); //store nodes that have already been visited
-        Set<NodeStatus> alreadyMapped = new LinkedHashSet<>();
-        Stack<Long> retraceSteps = new Stack<>(); //list to retrace steps
-        Queue<Long> retraceSteps2 = new ArrayDeque<>(); //list to retrace steps when you are retracing steps!
-        int stepsTaken = 0;
-        boolean stack1 = true;
-        boolean leaveBreadCrumbs = false;
-
-        //first put the only possible move into the queue
-        Collection<NodeStatus> cns = state.getNeighbours();
-        seen.add(state.getCurrentLocation());
-        cns.stream().forEach((s) -> pq.add(s, s.getDistanceToTarget()));
-        stepsTaken++;
-
-        while (state.getDistanceToTarget() != 0) {
-
-            //check if next node to move to is adjacent, if so move to it
-            if (cns.stream().anyMatch((s) -> s.getId() == pq.peek().getId())) {
-                retraceSteps.push(state.getCurrentLocation());
-                state.moveTo(pq.poll().getId());
-                stepsTaken++;
-            } else {
-                //if not adjacent then need to retrace steps until it is
-                while (!cns.contains(pq.peek())) {
-                    if (!retraceSteps.isEmpty()) {
-                        state.moveTo(retraceSteps.pop());
-                        stepsTaken++;
-                    } else {
-                        for (NodeStatus ns : cns) {
-                            if (!seen.contains(ns.getId())) {
-                                if (alreadyMapped.contains(ns)) {
-                                    //System.out.println("xxx");
-                                    pq.updatePriority(ns, ns.getDistanceToTarget() - stepsTaken + state.getDistanceToTarget());
-                                } else {
-                                    pq.add(ns, ns.getDistanceToTarget() - stepsTaken + state.getDistanceToTarget());
-                                    alreadyMapped.add(ns);
-                                }
-                            }
-                        }
-                    }
-                    cns = state.getNeighbours();
-                }
-                retraceSteps.push(state.getCurrentLocation());
-                state.moveTo(pq.poll().getId());
-            }
-
-                //if new node add it to seen
-            if (!seen.contains(state.getCurrentLocation())) {
-                seen.add(state.getCurrentLocation());
-            }
-            cns = state.getNeighbours();
-            for (NodeStatus ns : cns) {
-                if (!alreadyMapped.contains(ns)) {
-                    pq.add(ns, ns.getDistanceToTarget() * 100);
-                    alreadyMapped.add(ns);
-                }
-            }
-        }
-    }
-
-
-
-
-/*
         Set<Long> seen = new LinkedHashSet<>(); //a set to store nodes that have already been visited
         Stack<Long> dfs = new Stack<>(); //stack to use for the depth first search
         Stack<Long> retraceSteps = new Stack<>(); //stack to retrace steps
-
         //add the only possible starting node onto the stack
         Collection<NodeStatus> collectionNodeStatus = state.getNeighbours();
         collectionNodeStatus.stream().forEach((s) -> dfs.push(s.getId()));
         seen.add(state.getCurrentLocation());
-
         //now enter loop to keep moving until the orb is reached
         while (!dfs.isEmpty()) {
-
             collectionNodeStatus = state.getNeighbours();
             //make sure that the next node to move to is adjacent
             if (collectionNodeStatus.stream().anyMatch((s) -> s.getId() == dfs.peek())) {
@@ -149,7 +84,7 @@ public class Explorer {
             }
         }
     }
-    */
+
 
     /**
      * Escape from the cavern before the ceiling collapses, trying to collect as much
