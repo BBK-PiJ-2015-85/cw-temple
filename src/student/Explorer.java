@@ -109,13 +109,12 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void escape(EscapeState state) {
-        int timeFromCurrentPos = 0;
+        int timeFromCurrentPos = 0; // this will be the time to get from the current position to the exit by the shortest route
         Collection<Node> map = state.getVertices();
         Set<Node> myMap = new HashSet<>();
         map.stream().forEach(myMap::add);
         Stack<Node> escapeRoute = new Stack<>();
         Node maxGold = state.getCurrentNode();
-        // this works as shortest path to exit collecting any gold found along the way
 
         while (state.getTimeRemaining() - timeFromCurrentPos > timeFromCurrentPos) {
             escapeRoute.clear();
@@ -166,11 +165,25 @@ public class Explorer {
                 state.pickUpGold();
             }
 
-            // calculate the time to take the shortest escape route from current position
+
+            //check neighbouring tiles for gold
+            Collection<Node> neighbours = state.getCurrentNode().getNeighbours();
+            Node original = state.getCurrentNode();
+            for (Node n : neighbours) {
+                if (n.getTile().getGold() > 500 && !n.equals(findGold.peek())) {
+                    state.moveTo(n);
+                    state.pickUpGold();
+                    state.moveTo(original);
+                }
+            }
+
+
+            // calculate and update time to exit from current position
             timeFromCurrentPos = findGold.peek().getEdge(escapeRoute.peek()).length();
             for (int i = 0; i < escapeRoute.size() - 1; i++) {
                 timeFromCurrentPos += escapeRoute.get(i).getEdge(escapeRoute.get(i + 1)).length();
             }
+
             state.moveTo(findGold.pop());
 
         }
