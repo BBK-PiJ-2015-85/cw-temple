@@ -81,6 +81,7 @@ public class Explorer {
                         .forEach((s) -> dfs.push(s.getId()));
             }
         }
+
     }
 
 
@@ -141,6 +142,9 @@ public class Explorer {
         System.out.println("Distance of route taken: " + escapeRoute.size());
 
         while (state.getCurrentNode() != state.getExit()) {
+            if (state.getCurrentNode().getTile().getGold() > 0) {
+                state.pickUpGold();
+            }
             state.moveTo(escapeRoute.pop());
         }
 
