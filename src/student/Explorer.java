@@ -2,12 +2,10 @@ package student;
 
 import game.EscapeState;
 import game.ExplorationState;
+import game.Node;
 import game.NodeStatus;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 public class Explorer {
 
@@ -110,6 +108,44 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void escape(EscapeState state) {
-        //TODO: Escape from the cavern before time runs out
+        Stack<Node> escapeRoute = new Stack<>();
+        Queue<Node> planRoute = new ArrayDeque<>();
+        Map<Node, Integer> distanceMap = new HashMap<>();
+        Map<Node, Node> parentMap = new HashMap<>();
+        Collection<Node> map = state.getVertices();
+
+
+        distanceMap.put(state.getCurrentNode(), 0);
+        parentMap.put(state.getCurrentNode(), null);
+        planRoute.add(state.getCurrentNode());
+
+        while(!planRoute.isEmpty()) {
+            Node current = planRoute.poll();
+            Collection<Node> cns = current.getNeighbours();
+            for (Node n : cns) {
+                if (!distanceMap.containsKey(n)) {
+                    distanceMap.put(n, distanceMap.get(current) + 1);
+                    parentMap.put(n, current);
+                    planRoute.add(n);
+                }
+            }
+        }
+
+        Node current = state.getExit();
+        while (current != state.getCurrentNode()) {
+            escapeRoute.push(current);
+            current = parentMap.get(current);
+        }
+
+        System.out.println("Distance to exit: " + distanceMap.get(state.getExit()));
+        System.out.println("Distance of route taken: " + escapeRoute.size());
+
+        while (state.getCurrentNode() != state.getExit()) {
+            state.moveTo(escapeRoute.pop());
+        }
+
+
+
+
     }
 }
