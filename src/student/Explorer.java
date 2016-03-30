@@ -109,6 +109,9 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void escape(EscapeState state) {
+
+        // this works as shortest path to exit collecting any gold found along the way
+
         Stack<Node> escapeRoute = new Stack<>();
         Queue<Node> planRoute = new ArrayDeque<>();
         Map<Node, Integer> distanceMap = new HashMap<>();
@@ -132,20 +135,51 @@ public class Explorer {
             }
         }
 
+
         Node current = state.getExit();
         while (current != state.getCurrentNode()) {
             escapeRoute.push(current);
             current = parentMap.get(current);
         }
 
+        // calculate the time to take the shortest escape route from start
+        int totalTime = state.getCurrentNode().getEdge(escapeRoute.peek()).length();
+        for (int i = 0; i < escapeRoute.size() - 1; i++) {
+            totalTime += escapeRoute.get(i).getEdge(escapeRoute.get(i +1)).length();
+        }
+        System.out.println("Total distance to escape: " + totalTime);
+
         System.out.println("Distance to exit: " + distanceMap.get(state.getExit()));
         System.out.println("Distance of route taken: " + escapeRoute.size());
+        System.out.println("Time remaining: " + state.getTimeRemaining());
 
         while (state.getCurrentNode() != state.getExit()) {
+            // calculate the time to take the shortest escape route from current position
+            int timeFromCurrentPos = state.getCurrentNode().getEdge(escapeRoute.peek()).length();
+            for (int i = 0; i < escapeRoute.size() - 1; i++) {
+                timeFromCurrentPos += escapeRoute.get(i).getEdge(escapeRoute.get(i +1)).length();
+            }
+
+            //check neighbouring tiles for gold and if there is enough time visit them and pick up gold
+            Collection<Node> neighbours = state.getCurrentNode().getNeighbours();
+            Node original = state.getCurrentNode();
+            for (Node n : neighbours) {
+                if (n.getTile().getGold() > 0 && !n.equals(escapeRoute.peek())) {
+                    if (n.getEdge(state.getCurrentNode()).length() * 2 <= state.getTimeRemaining() - timeFromCurrentPos) {
+                        state.moveTo(n);
+                        state.pickUpGold();
+                        state.moveTo(original);
+                    }
+                }
+            }
+
             if (state.getCurrentNode().getTile().getGold() > 0) {
                 state.pickUpGold();
             }
+            System.out.println("Edge Length: " + state.getCurrentNode().getEdge(escapeRoute.peek()).length());
             state.moveTo(escapeRoute.pop());
+            System.out.println("Time remaining: " + state.getTimeRemaining());
+
         }
 
 
