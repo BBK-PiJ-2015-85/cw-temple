@@ -111,14 +111,22 @@ public class Explorer {
      */
     public void escape(EscapeState state) {
         int timeFromCurrentPos = 0; // this will be the time to get from the current position to the exit by the shortest route
+        int max = 0; // used to store the value of the largest pile of gold available
         Collection<Node> map = state.getVertices();
-        Set<Node> myMap = new HashSet<>();
+        List<Node> myMap = new ArrayList<>();
         map.stream().forEach(myMap::add);
+        myMap.sort((x, y) -> ((Integer)y.getTile().getGold()).compareTo(((Integer)x.getTile().getGold()))); //sort list into descending order
         Stack<Node> escapeRoute = new Stack<>();
         Node maxGold = state.getCurrentNode();
 
         // this is my "searching for gold" loop - i.e. there is surplus time so look for more gold!
         while (state.getTimeRemaining() - timeFromCurrentPos > timeFromCurrentPos) {
+
+            // pick up any gold on current node
+            if (state.getCurrentNode().getTile().getGold() > 0) {
+                state.pickUpGold();
+            }
+
             escapeRoute.clear();
             Stack<Node> findGold = new Stack<>();
             Queue<Node> planRoute = new ArrayDeque<>();
@@ -156,20 +164,27 @@ public class Explorer {
 
 
             // this is to find the largest pile of available gold in the cavern
-            int max = 0;
+
             myMap.remove(state.getCurrentNode());
-            for (Node n : myMap) {
-                if (n.getTile().getGold() > max) {
-                    max = n.getTile().getGold();
-                    maxGold = n;
+            maxGold = null;
+            while (maxGold == null && myMap.size() > 0) {
+                findGold.clear();
+                maxGold = myMap.get(0);
+                max = maxGold.getTile().getGold();
+                while (maxGold != state.getCurrentNode()) {
+                    findGold.push(maxGold);
+                    maxGold = parentMap.get(maxGold);
+                }
+                int timeToGold = findGold.peek().getEdge(state.getCurrentNode()).length();
+                for (int i = 0; i < findGold.size() - 1; i++) {
+                    timeToGold += findGold.get(i).getEdge(findGold.get(i + 1)).length();
+                }
+                if (timeToGold + timeFromCurrentPos > state.getTimeRemaining()) {
+                    maxGold = null;
+                    myMap.remove(0);
                 }
             }
-            while (maxGold != state.getCurrentNode()) {
-                findGold.push(maxGold);
-                maxGold = parentMap.get(maxGold);
-            }
 
-            //myMap.sort((x, y) -> ((Integer)y.getTile().getGold()).compareTo(((Integer)x.getTile().getGold())));
 
 
 
@@ -179,23 +194,19 @@ public class Explorer {
                 break;
             }
 
-            if (state.getCurrentNode().getTile().getGold() > 0) {
-                state.pickUpGold();
-            }
+
 
 
             //check neighbouring tiles for gold
             Collection<Node> neighbours = state.getCurrentNode().getNeighbours();
             Node original = state.getCurrentNode();
             for (Node n : neighbours) {
-                if (n.getTile().getGold() > 500 && !n.equals(findGold.peek())) {
-                    if (timeFromCurrentPos + (state.getCurrentNode().getEdge(n).length() * 2) < state.getTimeRemaining()) {
-                        state.moveTo(n);
-                        state.pickUpGold();
-                        state.moveTo(original);
-                    }
+                if (n.getTile().getGold() > 500 && n.getTile().getGold() > findGold.peek().getTile().getGold()) {
+                    findGold.push(n);
+                    break;
                 }
             }
+
 
 
             // calculate and update time to exit from current position
