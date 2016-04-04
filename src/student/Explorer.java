@@ -117,6 +117,7 @@ public class Explorer {
         Stack<Node> escapeRoute = new Stack<>();
         Node maxGold = state.getCurrentNode();
 
+        // this is my "searching for gold" loop - i.e. there is surplus time so look for more gold!
         while (state.getTimeRemaining() - timeFromCurrentPos > timeFromCurrentPos) {
             escapeRoute.clear();
             Stack<Node> findGold = new Stack<>();
@@ -148,17 +149,13 @@ public class Explorer {
             }
             escapeRoute.push(state.getCurrentNode());
 
-            /*
-            //calculate time to escape and see if there is only enough time to escape
+            //calculate time to escape from current position
             for (int i = 0; i < escapeRoute.size() - 1; i++) {
                 timeFromCurrentPos += escapeRoute.get(i).getEdge(escapeRoute.get(i + 1)).length();
             }
-            if (timeFromCurrentPos == state.getTimeRemaining()) {
-                break; //exit this loop and head staight for exit
-            }
-            */
 
 
+            // this is to find the largest pile of available gold in the cavern
             int max = 0;
             myMap.remove(state.getCurrentNode());
             for (Node n : myMap) {
@@ -171,6 +168,11 @@ public class Explorer {
                 findGold.push(maxGold);
                 maxGold = parentMap.get(maxGold);
             }
+
+            //myMap.sort((x, y) -> ((Integer)y.getTile().getGold()).compareTo(((Integer)x.getTile().getGold())));
+
+
+
             // if max == 0 then there is no gold within reach so head straight for exit
             if (max == 0) {
                 escapeRoute.pop();
@@ -187,9 +189,11 @@ public class Explorer {
             Node original = state.getCurrentNode();
             for (Node n : neighbours) {
                 if (n.getTile().getGold() > 500 && !n.equals(findGold.peek())) {
-                    state.moveTo(n);
-                    state.pickUpGold();
-                    state.moveTo(original);
+                    if (timeFromCurrentPos + (state.getCurrentNode().getEdge(n).length() * 2) < state.getTimeRemaining()) {
+                        state.moveTo(n);
+                        state.pickUpGold();
+                        state.moveTo(original);
+                    }
                 }
             }
 
@@ -200,16 +204,25 @@ public class Explorer {
                 timeFromCurrentPos += escapeRoute.get(i).getEdge(escapeRoute.get(i + 1)).length();
             }
 
-            state.moveTo(findGold.pop());
+            if (timeFromCurrentPos + state.getCurrentNode().getEdge(findGold.peek()).length() < state.getTimeRemaining()) {
+                //enough time to make move
+                state.moveTo(findGold.pop());
+            } else {
+                //not enough time and need to head for exit
+                escapeRoute.pop(); //already on this tile so pop it off the stack
+                break;
+            }
 
         }
 
+        // this is my "head for the exit!" loop - i.e. there is only enough time to exit
         while (state.getCurrentNode() != state.getExit()) {
             // get time from current position
             timeFromCurrentPos = state.getCurrentNode().getEdge(escapeRoute.peek()).length();
             for (int i = 0; i < escapeRoute.size() - 1; i++) {
                 timeFromCurrentPos += escapeRoute.get(i).getEdge(escapeRoute.get(i + 1)).length();
             }
+
 
             //check neighbouring tiles for gold and if there is enough time visit them and pick up gold
             Collection<Node> neighbours = state.getCurrentNode().getNeighbours();
@@ -223,6 +236,8 @@ public class Explorer {
                     }
                 }
             }
+
+
 
             if (state.getCurrentNode().getTile().getGold() > 0) {
                 state.pickUpGold();
