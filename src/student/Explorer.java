@@ -7,6 +7,7 @@ import game.NodeStatus;
 
 import java.util.*;
 
+
 public class Explorer {
 
     /**
@@ -147,6 +148,16 @@ public class Explorer {
             }
             escapeRoute.push(state.getCurrentNode());
 
+            /*
+            //calculate time to escape and see if there is only enough time to escape
+            for (int i = 0; i < escapeRoute.size() - 1; i++) {
+                timeFromCurrentPos += escapeRoute.get(i).getEdge(escapeRoute.get(i + 1)).length();
+            }
+            if (timeFromCurrentPos == state.getTimeRemaining()) {
+                break; //exit this loop and head staight for exit
+            }
+            */
+
 
             int max = 0;
             myMap.remove(state.getCurrentNode());
@@ -159,6 +170,11 @@ public class Explorer {
             while (maxGold != state.getCurrentNode()) {
                 findGold.push(maxGold);
                 maxGold = parentMap.get(maxGold);
+            }
+            // if max == 0 then there is no gold within reach so head straight for exit
+            if (max == 0) {
+                escapeRoute.pop();
+                break;
             }
 
             if (state.getCurrentNode().getTile().getGold() > 0) {
