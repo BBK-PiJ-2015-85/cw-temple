@@ -114,7 +114,7 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void escape(EscapeState state) {
-
+        int timeFromNextMove = ZERO;
         int timeFromCurrentPos = ZERO; // this will be the time to get from the current position to the exit by the shortest route
         int max = ZERO; // used to store the value of the largest pile of gold available
 
@@ -128,7 +128,7 @@ public class Explorer {
         Stack<Node> escapeRoute = new Stack<>(); // stack to store fastest escape route from current position
 
         // this is my "searching for gold" loop - i.e. there is surplus time so look for more gold!
-        while (state.getTimeRemaining() - timeFromCurrentPos > timeFromCurrentPos) {
+        while (state.getTimeRemaining() > timeFromNextMove) {
 
             // pick up any gold on current node
             if (state.getCurrentNode().getTile().getGold() > ZERO) {
@@ -140,6 +140,7 @@ public class Explorer {
             // which will allow route planning to exit and to gold
             escapeRoute.clear();
             Stack<Node> findGold = new Stack<>(); // stack for gold finding
+            /*
             Queue<Node> planRoute = new ArrayDeque<>(); // queue for the BFS
             Map<Node, Node> parentMap = new HashMap<>(); // map to link nodes to parent nodes for route finding
 
@@ -163,13 +164,18 @@ public class Explorer {
                 escapeRoute.push(current);
                 current = parentMap.get(current);
             }
-            escapeRoute.push(state.getCurrentNode());
+            */
+            escapeRoute = routeToNode(state.getCurrentNode(), state.getExit());
+            //escapeRoute.push(state.getCurrentNode());
 
             //calculate time to escape from current position
+            timeFromCurrentPos = timeToNode(state.getCurrentNode(), state.getExit());
+            /*
             timeFromCurrentPos = ZERO;
             for (int i = ZERO; i < escapeRoute.size() - ONE; i++) {
                 timeFromCurrentPos += escapeRoute.get(i).getEdge(escapeRoute.get(i + ONE)).length();
             }
+            */
 
 
 
@@ -182,19 +188,19 @@ public class Explorer {
                 findGold.clear();
                 maxGold = myMap.get(ZERO); // first in list has the most gold as this was sorted earlier
                 max = maxGold.getTile().getGold();
+                findGold = routeToNode(state.getCurrentNode(), maxGold);
+                /*
                 while (maxGold != state.getCurrentNode()) {
                     // push route to this node onto the findGold stack
                     findGold.push(maxGold);
                     maxGold = parentMap.get(maxGold);
                 }
+                */
                 // calculate time to this node
-                int timeToGold = findGold.peek().getEdge(state.getCurrentNode()).length();
-                for (int i = ZERO; i < findGold.size() - ONE; i++) {
-                    timeToGold += findGold.get(i).getEdge(findGold.get(i + ONE)).length();
-                }
+                int timeToGold = timeToNode(state.getCurrentNode(), findGold.peek());
                 // double it (as in worst case I will need to backtrack the exact route) and add time to exit,
                 // then compare to time left to see if there is time to reach this node
-                if (timeToGold * TWO + timeFromCurrentPos > state.getTimeRemaining()) {
+                if (timeToNode(maxGold, state.getExit()) + timeToNode(state.getCurrentNode(), maxGold) > state.getTimeRemaining()) {
                     // node is too far away so remove it from myMap and repeat loop with the next largest
                     maxGold = null;
                     myMap.remove(ZERO);
@@ -205,7 +211,7 @@ public class Explorer {
 
             // if max == 0 then there is no gold within reach so head straight for exit
             if (max == ZERO) {
-                escapeRoute.pop(); // already on this tile so pop it off the stack
+                //escapeRoute.pop(); // already on this tile so pop it off the stack
                 break;
             }
 
@@ -221,14 +227,18 @@ public class Explorer {
 
 
             // add the cost of the next move to escape time
-            timeFromCurrentPos += findGold.peek().getEdge(escapeRoute.peek()).length();
+            //timeFromCurrentPos += findGold.peek().getEdge(escapeRoute.peek()).length() * 2;
+            timeFromNextMove = timeToNode(findGold.peek(), state.getExit()) + state.getCurrentNode().getEdge(findGold.peek()).length();
 
-            if (timeFromCurrentPos + state.getCurrentNode().getEdge(findGold.peek()).length() < state.getTimeRemaining()) {
+            if (timeFromNextMove <= state.getTimeRemaining()) {
                 //enough time to make move
+                if (state.getCurrentNode().equals(findGold.peek())) {
+                    findGold.pop();
+                }
                 state.moveTo(findGold.pop());
             } else {
                 //not enough time and need to head for exit
-                escapeRoute.pop(); //already on this tile so pop it off the stack
+                //escapeRoute.pop(); //already on this tile so pop it off the stack
                 break;
             }
         }
@@ -236,13 +246,11 @@ public class Explorer {
 
 
         // this is my "head for the exit!" loop - i.e. there is only enough time to exit
+        escapeRoute = routeToNode(state.getCurrentNode(), state.getExit());
 
         while (state.getCurrentNode() != state.getExit()) {
             // get time from current position
-            timeFromCurrentPos = state.getCurrentNode().getEdge(escapeRoute.peek()).length();
-            for (int i = ZERO; i < escapeRoute.size() - ONE; i++) {
-                timeFromCurrentPos += escapeRoute.get(i).getEdge(escapeRoute.get(i + ONE)).length();
-            }
+            timeFromCurrentPos = timeToNode(state.getCurrentNode(), state.getExit());
 
 
             //check neighbouring tiles for gold and if there is enough time visit them and pick up gold
@@ -267,5 +275,48 @@ public class Explorer {
             // move to next tile on escape route
             state.moveTo(escapeRoute.pop());
         }
+    }
+
+    private Stack<Node> routeToNode(Node nodeA, Node nodeB) {
+        Stack<Node> route = new Stack<>();
+        Queue<Node> planRoute = new ArrayDeque<>(); // queue for the BFS
+        Map<Node, Node> parentMap = new HashMap<>(); // map to link nodes to parent nodes for route finding
+
+        parentMap.put(nodeA, null); // add current node to map with no parent node
+        planRoute.add(nodeA); // add current node to BFS queue
+
+        while(!planRoute.isEmpty()) {
+            // take a node from the BFS queue and look at all it's neighbouring nodes
+            Node current = planRoute.poll();
+            Collection<Node> cns = current.getNeighbours();
+            // if they have not been looked at add them to the parent map and BFS queue
+            cns.stream().filter((s) -> !parentMap.containsKey(s)).forEach((s) -> {
+                parentMap.put(s, current);
+                planRoute.add(s);
+            });
+        }
+
+        // push whole route onto stack
+
+        while (nodeB != nodeA) {
+            route.push(nodeB);
+            nodeB = parentMap.get(nodeB);
+        }
+
+        //route.push(nodeA);
+
+        return route;
+
+
+    }
+
+    private int timeToNode (Node nodeA, Node nodeB) {
+        Stack<Node> route = routeToNode(nodeA, nodeB);
+        route.push(nodeA);
+        int time = ZERO;
+        for (int i = ZERO; i < route.size() - ONE; i++) {
+            time += route.get(i).getEdge(route.get(i + ONE)).length();
+        }
+        return time;
     }
 }
