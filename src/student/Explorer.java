@@ -5,13 +5,21 @@ import game.ExplorationState;
 import game.Node;
 import game.NodeStatus;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.Stack;
 
 
 public class Explorer {
     private static final int ZERO = 0;
     private static final int ONE = 1;
-    private static final int TWO = 2;
     private static final int FIVE_HUNDRED = 500;
 
     /**
@@ -114,20 +122,19 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void escape(EscapeState state) {
-        int timeFromNextMove = ZERO;
-        int timeFromCurrentPos = ZERO; // this will be the time to get from the current position to the exit by the shortest route
+        int timeForNextMove = ZERO;
         int max = ZERO; // used to store the value of the largest pile of gold available
 
 
         Collection<Node> map = state.getVertices();
-        List<Node> myMap = new ArrayList<>();
+        List<Node> myMap = new ArrayList<>(); //CHANGE NAME OF MYMAP!!!
         map.stream().forEach(myMap::add);
         myMap.sort((x, y) -> ((Integer)y.getTile().getGold()).compareTo(((Integer)x.getTile().getGold())));
         //myMap is now a list of all nodes in order of amount of gold on each node
 
 
         // this is my "searching for gold" loop - i.e. there is surplus time so look for more gold!
-        while (state.getTimeRemaining() > timeFromNextMove) {
+        while (state.getTimeRemaining() > timeForNextMove) {
 
             // pick up any gold on current node
             if (state.getCurrentNode().getTile().getGold() > ZERO) {
@@ -170,9 +177,9 @@ public class Explorer {
                 }
             }
 
-            timeFromNextMove = timeToNode(findGold.peek(), state.getExit()) + state.getCurrentNode().getEdge(findGold.peek()).length();
+            timeForNextMove = timeToNode(findGold.peek(), state.getExit()) + state.getCurrentNode().getEdge(findGold.peek()).length();
 
-            if (timeFromNextMove <= state.getTimeRemaining()) {
+            if (timeForNextMove <= state.getTimeRemaining()) {
                 //enough time to make move
                 state.moveTo(findGold.pop());
             } else {
@@ -188,9 +195,6 @@ public class Explorer {
         Stack<Node> escapeRoute = routeToNode(state.getCurrentNode(), state.getExit());
 
         while (state.getCurrentNode() != state.getExit()) {
-            // get time from current position
-            timeFromCurrentPos = timeToNode(state.getCurrentNode(), state.getExit());
-
 
             //check neighbouring tiles for gold and if there is enough time visit them and pick up gold
             Collection<Node> neighbours = state.getCurrentNode().getNeighbours();
@@ -204,7 +208,6 @@ public class Explorer {
                     }
                 }
             }
-
 
             // pick up any gold on current tile
             if (state.getCurrentNode().getTile().getGold() > ZERO) {
@@ -241,8 +244,6 @@ public class Explorer {
             route.push(nodeB);
             nodeB = parentMap.get(nodeB);
         }
-
-        //route.push(nodeA);
 
         return route;
 
