@@ -122,9 +122,6 @@ public class Explorer {
         List<Node> goldList = allNodes.stream().filter((s) -> s.getTile().getGold() > ZERO).collect(Collectors.toList());
 
 
-        routeToNode(state.getCurrentNode(), state.getExit()); // call this method once before loop to get an initial overview of distances to gold
-
-
         // this is my "searching for gold" loop - i.e. there is surplus time so look for more gold!
 
         while (state.getTimeRemaining() > timeForNextMove) {
@@ -134,10 +131,11 @@ public class Explorer {
                 state.pickUpGold();
             }
 
+            routeToNode(state.getCurrentNode(), state.getExit()); // call this method to generate distances to gold
+
 
             // this section is to find the closest pile of gold
 
-            Stack<Node> findGold = new Stack<>(); // stack for the route
             goldList.remove(state.getCurrentNode()); // remove current node as gold already collected from here
 
             // sort list into order of closest nodes
@@ -148,7 +146,7 @@ public class Explorer {
                 break;
             }
 
-            findGold = routeToNode(state.getCurrentNode(), goldList.get(ZERO)); // store route to closest gold
+            Stack<Node> findGold = routeToNode(state.getCurrentNode(), goldList.get(ZERO)); // store route to closest gold
 
 
             // now calculate the time it will take to get to the exit including the next move
@@ -162,7 +160,6 @@ public class Explorer {
                 break;
             }
         }
-
 
 
         // this is my "head for the exit!" loop - i.e. there is only enough time to exit
@@ -194,22 +191,32 @@ public class Explorer {
         }
     }
 
-
+    /**
+     * Helper method to calculate the fastest route between two given nodes.
+     *
+     * This uses a breadth first search technique. Although it returns the route
+     * (as a stack) it also stores distances of the route in the distanceMap field.
+     *
+     * @param nodeA the start node
+     * @param nodeB the end node
+     * @return the fastest route between the nodes as a stack
+     */
     private Stack<Node> routeToNode(Node nodeA, Node nodeB) {
-        Stack<Node> route = new Stack<>();
+
+        Stack<Node> route = new Stack<>(); // stack for the route
         Queue<Node> planRoute = new ArrayDeque<>(); // queue for the BFS
         Map<Node, Node> parentMap = new HashMap<>(); // map to link nodes to parent nodes for route finding
-        distanceMap = new HashMap<>();
+        distanceMap = new HashMap<>(); // map to store distances - is a field as escape method needs access
 
-        distanceMap.put(nodeA, ZERO);
-        parentMap.put(nodeA, null); // add current node to map with no parent node
-        planRoute.add(nodeA); // add current node to BFS queue
+        distanceMap.put(nodeA, ZERO); // add start node with distance of 0
+        parentMap.put(nodeA, null); // add start node to map with no parent node
+        planRoute.add(nodeA); // add start node to BFS queue
 
         while(!planRoute.isEmpty()) {
             // take a node from the BFS queue and look at all it's neighbouring nodes
             Node current = planRoute.poll();
             Collection<Node> cns = current.getNeighbours();
-            // if they have not been looked at add them to the parent map and BFS queue
+            // if they have not been looked at add them to the distance and parent maps and BFS queue
             cns.stream().filter((s) -> !parentMap.containsKey(s)).forEach((s) -> {
                 parentMap.put(s, current);
                 distanceMap.put(s, distanceMap.get(current) + ONE);
@@ -225,16 +232,23 @@ public class Explorer {
         }
 
         return route;
-
-
     }
 
+    /**
+     * Helper method to determine the time it will take to move between
+     * two given nodes.
+     *
+     * @param nodeA the start node
+     * @param nodeB the end node
+     * @return the time it will take to move between nodeA and nodeB
+     */
     private int timeToNode (Node nodeA, Node nodeB) {
-        Stack<Node> route = routeToNode(nodeA, nodeB);
-        route.push(nodeA);
+
+        Stack<Node> route = routeToNode(nodeA, nodeB); // first calculate route
+        route.push(nodeA); // add start node
         int time = ZERO;
         for (int i = ZERO; i < route.size() - ONE; i++) {
-            time += route.get(i).getEdge(route.get(i + ONE)).length();
+            time += route.get(i).getEdge(route.get(i + ONE)).length(); // cumulatively add edges
         }
         return time;
     }
