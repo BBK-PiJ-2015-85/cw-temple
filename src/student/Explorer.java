@@ -21,6 +21,7 @@ public class Explorer {
     private static final int ZERO = 0;
     private static final int ONE = 1;
     private static final int FIVE_HUNDRED = 500;
+    private Map<Node, Integer> distanceMap;
 
     /**
      * Explore the cavern, trying to find the orb in as few steps as possible.
@@ -132,6 +133,7 @@ public class Explorer {
         myMap.sort((x, y) -> ((Integer)y.getTile().getGold()).compareTo(((Integer)x.getTile().getGold())));
         //myMap is now a list of all nodes in order of amount of gold on each node
 
+        routeToNode(state.getCurrentNode(), state.getExit());
 
         // this is my "searching for gold" loop - i.e. there is surplus time so look for more gold!
         while (state.getTimeRemaining() > timeForNextMove) {
@@ -146,6 +148,8 @@ public class Explorer {
             // that there is enough time to reach
             Stack<Node> findGold = new Stack<>(); // stack for gold finding
             myMap.remove(state.getCurrentNode());
+
+            /*
             Node maxGold = null;
             while (maxGold == null && myMap.size() > ZERO) {
                 findGold.clear();
@@ -160,6 +164,19 @@ public class Explorer {
                     myMap.remove(ZERO);
                 }
             }
+            */
+
+            myMap.sort((x, y) -> distanceMap.get(x).compareTo(distanceMap.get(y)));
+
+            while (!myMap.isEmpty() && myMap.get(ZERO).getTile().getGold() == ZERO) {
+                myMap.remove(ZERO);
+            }
+            if (myMap.isEmpty()) {
+                break;
+            }
+
+            findGold = routeToNode(state.getCurrentNode(), myMap.get(ZERO));
+            max = myMap.get(ZERO).getTile().getGold();
 
 
             // if max == 0 then there is no gold within reach so head straight for exit
@@ -167,7 +184,7 @@ public class Explorer {
                 break;
             }
 
-
+            /*
             //check neighbouring tiles for gold above 500 and add to findGold stack if there are any
             Collection<Node> neighbours = state.getCurrentNode().getNeighbours();
             for (Node n : neighbours) {
@@ -176,6 +193,7 @@ public class Explorer {
                     break;
                 }
             }
+            */
 
             timeForNextMove = timeToNode(findGold.peek(), state.getExit()) + state.getCurrentNode().getEdge(findGold.peek()).length();
 
@@ -223,7 +241,9 @@ public class Explorer {
         Stack<Node> route = new Stack<>();
         Queue<Node> planRoute = new ArrayDeque<>(); // queue for the BFS
         Map<Node, Node> parentMap = new HashMap<>(); // map to link nodes to parent nodes for route finding
+        distanceMap = new HashMap<>();
 
+        distanceMap.put(nodeA, ZERO);
         parentMap.put(nodeA, null); // add current node to map with no parent node
         planRoute.add(nodeA); // add current node to BFS queue
 
@@ -234,6 +254,7 @@ public class Explorer {
             // if they have not been looked at add them to the parent map and BFS queue
             cns.stream().filter((s) -> !parentMap.containsKey(s)).forEach((s) -> {
                 parentMap.put(s, current);
+                distanceMap.put(s, distanceMap.get(current) + 1);
                 planRoute.add(s);
             });
         }
