@@ -13,7 +13,8 @@ public class Explorer {
     private static final int ZERO = 0;
     private static final int ONE = 1;
     private static final int FIVE_HUNDRED = 500;
-    private Map<Node, Integer> distanceMap;
+
+    private Map<Node, Integer> distanceMap; // map used in escape phase to store distances to nodes from current node
 
     /**
      * Explore the cavern, trying to find the orb in as few steps as possible.
@@ -48,46 +49,49 @@ public class Explorer {
     public void explore(ExplorationState state) {
 
         Set<Long> seen = new LinkedHashSet<>(); //a set to store nodes that have already been visited
-        Stack<Long> dfs = new Stack<>(); //stack to use for the depth first search
+        Stack<Long> route = new Stack<>(); //stack to store the route on
         Stack<Long> retraceSteps = new Stack<>(); //stack to retrace steps
         //add the only possible starting node onto the stack
         Collection<NodeStatus> collectionNodeStatus = state.getNeighbours();
-        collectionNodeStatus.stream().forEach((s) -> dfs.push(s.getId()));
+        collectionNodeStatus.stream().forEach((s) -> route.push(s.getId()));
         seen.add(state.getCurrentLocation());
+
         //now enter loop to keep moving until the orb is reached
-        while (!dfs.isEmpty()) {
+        while (!route.isEmpty()) {
             collectionNodeStatus = state.getNeighbours();
             //make sure that the next node to move to is adjacent
-            if (collectionNodeStatus.stream().anyMatch((s) -> s.getId() == dfs.peek())) {
+            if (collectionNodeStatus.stream().anyMatch((s) -> s.getId() == route.peek())) {
                 retraceSteps.push(state.getCurrentLocation());
-                state.moveTo(dfs.pop());
+                state.moveTo(route.pop());
             } else {
                 //if not adjacent then need to retrace steps until it is adjacent
-                while (!collectionNodeStatus.stream().anyMatch((s) -> s.getId() == dfs.peek())) {
+                while (!collectionNodeStatus.stream().anyMatch((s) -> s.getId() == route.peek())) {
                     state.moveTo(retraceSteps.pop());
                     collectionNodeStatus = state.getNeighbours();
                 }
                 retraceSteps.push(state.getCurrentLocation());
-                state.moveTo(dfs.pop());
+                state.moveTo(route.pop());
             }
+            // add current node to seen collection
             if (!seen.contains(state.getCurrentLocation())) {
                 seen.add(state.getCurrentLocation());
             }
+
             if (state.getDistanceToTarget() == ZERO) {
+                // target reached
                 break;
             } else {
                 collectionNodeStatus = state.getNeighbours();
                 //first add those not seen that are equal or further away to the orb
                 collectionNodeStatus.stream().filter((s) -> !seen.contains(s.getId()))
                         .filter((s) -> s.getDistanceToTarget() >= state.getDistanceToTarget())
-                        .forEach((s) -> dfs.push(s.getId()));
+                        .forEach((s) -> route.push(s.getId()));
                 //then add those not seen that are closer to the orb so these will be looked at first
                 collectionNodeStatus.stream().filter((s) -> !seen.contains(s.getId()))
                         .filter((s) -> s.getDistanceToTarget() < state.getDistanceToTarget())
-                        .forEach((s) -> dfs.push(s.getId()));
+                        .forEach((s) -> route.push(s.getId()));
             }
         }
-
     }
 
 
@@ -115,43 +119,34 @@ public class Explorer {
      * @param state the information available at the current state
      */
     public void escape(EscapeState state) {
+
         int timeForNextMove = ZERO; // used to store the time that the next move will take
 
         Collection<Node> allNodes = state.getVertices();
         // filter allNodes into a list with only nodes that contain gold
         List<Node> goldList = allNodes.stream().filter((s) -> s.getTile().getGold() > ZERO).collect(Collectors.toList());
 
-
         // this is my "searching for gold" loop - i.e. there is surplus time so look for more gold!
-
         while (state.getTimeRemaining() > timeForNextMove) {
 
             // pick up any gold on current node
             if (state.getCurrentNode().getTile().getGold() > ZERO) {
                 state.pickUpGold();
             }
-
             routeToNode(state.getCurrentNode(), state.getExit()); // call this method to generate distances to gold
 
-
             // this section is to find the closest pile of gold
-
             goldList.remove(state.getCurrentNode()); // remove current node as gold already collected from here
-
             // sort list into order of closest nodes
             goldList.sort((x, y) -> distanceMap.get(x).compareTo(distanceMap.get(y)));
-
             if (goldList.isEmpty()) {
                 // no gold left!
                 break;
             }
-
             Stack<Node> findGold = routeToNode(state.getCurrentNode(), goldList.get(ZERO)); // store route to closest gold
-
 
             // now calculate the time it will take to get to the exit including the next move
             timeForNextMove = timeToNode(findGold.peek(), state.getExit()) + state.getCurrentNode().getEdge(findGold.peek()).length();
-
             if (timeForNextMove <= state.getTimeRemaining()) {
                 //enough time to make move
                 state.moveTo(findGold.pop());
@@ -163,9 +158,7 @@ public class Explorer {
 
 
         // this is my "head for the exit!" loop - i.e. there is only enough time to exit
-
         Stack<Node> escapeRoute = routeToNode(state.getCurrentNode(), state.getExit());
-
         while (state.getCurrentNode() != state.getExit()) {
 
             //check neighbouring tiles for gold and if there is enough time visit them and pick up gold
@@ -180,12 +173,10 @@ public class Explorer {
                     }
                 }
             }
-
             // pick up any gold on current tile
             if (state.getCurrentNode().getTile().getGold() > ZERO) {
                 state.pickUpGold();
             }
-
             // move to next tile on escape route
             state.moveTo(escapeRoute.pop());
         }
@@ -225,12 +216,10 @@ public class Explorer {
         }
 
         // push whole route onto stack
-
         while (nodeB != nodeA) {
             route.push(nodeB);
             nodeB = parentMap.get(nodeB);
         }
-
         return route;
     }
 
