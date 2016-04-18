@@ -5,14 +5,21 @@ import game.ExplorationState;
 import game.Node;
 import game.NodeStatus;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.Stack;
 import java.util.stream.Collectors;
 
 
 public class Explorer {
     private static final int ZERO = 0;
     private static final int ONE = 1;
-    private static final int FIVE_HUNDRED = 500;
 
     private Map<Node, Integer> distanceMap; // map used in escape phase to store distances to nodes from current node
 
